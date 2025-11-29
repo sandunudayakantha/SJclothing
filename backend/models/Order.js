@@ -24,7 +24,7 @@ const orderSchema = new mongoose.Schema({
   orderNumber: {
     type: String,
     unique: true,
-    required: true
+    required: false // Will be generated in pre-save hook
   },
   items: [orderItemSchema],
   customer: {
@@ -63,11 +63,32 @@ const orderSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Generate order number before saving
+// Generate order number before saving (always generate if not provided)
 orderSchema.pre('save', async function(next) {
-  if (!this.orderNumber) {
-    const count = await mongoose.model('Order').countDocuments();
-    this.orderNumber = `ORD-${Date.now()}-${count + 1}`;
+  // Always generate orderNumber if it doesn't exist
+  if (!this.orderNumber || this.orderNumber.trim() === '') {
+    try {
+      // Use a more unique order number with timestamp and random component
+      // This combination makes collisions extremely unlikely
+      const timestamp = Date.now();
+      const random = Math.floor(Math.random() * 100000);
+      const processId = process.pid || 0;
+      this.orderNumber = `ORD-${timestamp}-${random}-${processId}`;
+    } catch (error) {
+      console.error('Error generating order number:', error);
+      return next(error);
+    }
+  }
+  next();
+});
+
+// Also generate on validate to ensure it's set before validation
+orderSchema.pre('validate', function(next) {
+  if (!this.orderNumber || this.orderNumber.trim() === '') {
+    const timestamp = Date.now();
+    const random = Math.floor(Math.random() * 100000);
+    const processId = process.pid || 0;
+    this.orderNumber = `ORD-${timestamp}-${random}-${processId}`;
   }
   next();
 });

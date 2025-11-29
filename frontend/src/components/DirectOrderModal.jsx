@@ -44,7 +44,7 @@ const DirectOrderModal = ({ isOpen, onClose, product, selectedSize, selectedColo
         customer: formData
       }
 
-      await api.post('/orders', orderData)
+      const response = await api.post('/orders', orderData)
       toast.success('Order placed successfully!')
       onClose()
       // Reset form
@@ -56,7 +56,8 @@ const DirectOrderModal = ({ isOpen, onClose, product, selectedSize, selectedColo
       })
     } catch (error) {
       console.error('Error placing order:', error)
-      toast.error('Failed to place order. Please try again.')
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to place order. Please try again.'
+      toast.error(errorMessage)
     } finally {
       setLoading(false)
     }

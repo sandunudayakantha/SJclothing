@@ -6,6 +6,8 @@ export const createOrder = async (req, res) => {
   try {
     const { items, customer } = req.body;
 
+    console.log('Creating order with data:', { itemsCount: items?.length, customer: customer?.name });
+
     if (!items || items.length === 0) {
       return res.status(400).json({ message: 'Order items are required' });
     }
@@ -24,6 +26,17 @@ export const createOrder = async (req, res) => {
         return res.status(404).json({ message: `Product ${item.product} not found` });
       }
 
+      // Validate stock availability
+      if (product.stock === 0) {
+        return res.status(400).json({ message: `Product "${product.title}" is out of stock` });
+      }
+
+      if (item.quantity > product.stock) {
+        return res.status(400).json({ 
+          message: `Only ${product.stock} units available for "${product.title}". You requested ${item.quantity}.` 
+        });
+      }
+
       const price = product.discountPrice || product.price;
       const itemTotal = price * item.quantity;
       totalAmount += itemTotal;
@@ -38,7 +51,14 @@ export const createOrder = async (req, res) => {
       });
     }
 
+    // Generate order number
+    const timestamp = Date.now();
+    const random = Math.floor(Math.random() * 100000);
+    const processId = process.pid || 0;
+    const orderNumber = `ORD-${timestamp}-${random}-${processId}`;
+
     const order = new Order({
+      orderNumber,
       items: orderItems,
       customer,
       totalAmount,
@@ -48,9 +68,19 @@ export const createOrder = async (req, res) => {
     await order.save();
     await order.populate('items.product', 'title images');
 
+    console.log('Order created successfully:', order.orderNumber);
     res.status(201).json(order);
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    console.error('Error creating order:', error);
+    // Provide more detailed error messages
+    if (error.name === 'ValidationError') {
+      const errors = Object.values(error.errors).map(err => err.message).join(', ');
+      return res.status(400).json({ message: `Validation error: ${errors}` });
+    }
+    if (error.code === 11000) {
+      return res.status(400).json({ message: 'Order number already exists. Please try again.' });
+    }
+    res.status(400).json({ message: error.message || 'Failed to create order. Please try again.' });
   }
 };
 
