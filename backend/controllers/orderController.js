@@ -4,9 +4,9 @@ import Product from '../models/Product.js';
 // Create order
 export const createOrder = async (req, res) => {
   try {
-    const { items, customer } = req.body;
+    const { items, customer, deliveryFee } = req.body;
 
-    console.log('Creating order with data:', { itemsCount: items?.length, customer: customer?.name });
+    console.log('Creating order with data:', { itemsCount: items?.length, customer: customer?.name, deliveryFee });
 
     if (!items || items.length === 0) {
       return res.status(400).json({ message: 'Order items are required' });
@@ -17,7 +17,7 @@ export const createOrder = async (req, res) => {
     }
 
     // Calculate total and validate products
-    let totalAmount = 0;
+    let subtotal = 0;
     const orderItems = [];
 
     for (const item of items) {
@@ -39,7 +39,7 @@ export const createOrder = async (req, res) => {
 
       const price = product.discountPrice || product.price;
       const itemTotal = price * item.quantity;
-      totalAmount += itemTotal;
+      subtotal += itemTotal;
 
       orderItems.push({
         product: product._id,
@@ -50,6 +50,10 @@ export const createOrder = async (req, res) => {
         price: price
       });
     }
+
+    // Add delivery fee to total
+    const deliveryFeeAmount = deliveryFee ? parseFloat(deliveryFee) : 0;
+    const totalAmount = subtotal + deliveryFeeAmount;
 
     // Generate order number
     const timestamp = Date.now();
@@ -62,6 +66,7 @@ export const createOrder = async (req, res) => {
       items: orderItems,
       customer,
       totalAmount,
+      deliveryFee: deliveryFeeAmount,
       paymentMethod: 'Cash on Delivery'
     });
 

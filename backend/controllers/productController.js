@@ -10,34 +10,42 @@ export const getProducts = async (req, res) => {
     const andConditions = [];
 
     // Handle category filtering (supports both main categories and subcategories)
-    if (category) {
-      const categoryDoc = await Category.findById(category);
+    if (category && category !== 'null' && category !== 'undefined') {
+      // Validate that category is a valid MongoDB ObjectId format
+      const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(category);
       
-      if (categoryDoc) {
-        if (categoryDoc.parent) {
-          // It's a subcategory - filter by subcategory ID or parent category with matching subcategory name
-          andConditions.push({
-            $or: [
-              { category: category }, // Products directly assigned to this subcategory
-              {
-                category: categoryDoc.parent, // Products assigned to parent category
-                subcategory: { $regex: categoryDoc.name, $options: 'i' } // With matching subcategory name
-              }
-            ]
-          });
-        } else {
-          // It's a main category - show all products in this category and its subcategories
-          const subcategoryIds = categoryDoc.subcategories || [];
-          andConditions.push({
-            $or: [
-              { category: category }, // Products in main category
-              { category: { $in: subcategoryIds } } // Products in subcategories
-            ]
-          });
-        }
-      } else {
-        // Category not found, return empty results
+      if (!isValidObjectId) {
+        // Invalid category ID format, return empty results
         query.category = 'invalid-id-that-will-not-match';
+      } else {
+        const categoryDoc = await Category.findById(category);
+        
+        if (categoryDoc) {
+          if (categoryDoc.parent) {
+            // It's a subcategory - filter by subcategory ID or parent category with matching subcategory name
+            andConditions.push({
+              $or: [
+                { category: category }, // Products directly assigned to this subcategory
+                {
+                  category: categoryDoc.parent, // Products assigned to parent category
+                  subcategory: { $regex: categoryDoc.name, $options: 'i' } // With matching subcategory name
+                }
+              ]
+            });
+          } else {
+            // It's a main category - show all products in this category and its subcategories
+            const subcategoryIds = categoryDoc.subcategories || [];
+            andConditions.push({
+              $or: [
+                { category: category }, // Products in main category
+                { category: { $in: subcategoryIds } } // Products in subcategories
+              ]
+            });
+          }
+        } else {
+          // Category not found, return empty results
+          query.category = 'invalid-id-that-will-not-match';
+        }
       }
     }
     

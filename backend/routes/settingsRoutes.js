@@ -15,7 +15,10 @@ router.get('/', getSettings);
 router.post('/contact', sendContactEmail);
 
 // Protected routes (Admin only)
-router.put('/', protect, upload.single('bannerImage'), parseNestedForm, updateSettings);
+router.put('/', protect, upload.fields([
+  { name: 'bannerImage', maxCount: 1 },
+  { name: 'bannerImages', maxCount: 10 }
+]), parseNestedForm, updateSettings);
 
 export default router;
 

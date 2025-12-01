@@ -11,6 +11,7 @@ import SizeForm from './pages/SizeForm'
 import Colors from './pages/Colors'
 import ColorForm from './pages/ColorForm'
 import Orders from './pages/Orders'
+import ContactMessages from './pages/ContactMessages'
 import Settings from './pages/Settings'
 import ProtectedRoute from './components/ProtectedRoute'
 import Sidebar from './components/Sidebar'
@@ -42,6 +43,7 @@ function App() {
                     <Route path="colors/new" element={<ColorForm />} />
                     <Route path="colors/edit/:id" element={<ColorForm />} />
                     <Route path="orders" element={<Orders />} />
+                    <Route path="contact-messages" element={<ContactMessages />} />
                     <Route path="settings" element={<Settings />} />
                   </Routes>
                 </div>

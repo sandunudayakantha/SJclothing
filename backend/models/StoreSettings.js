@@ -6,6 +6,10 @@ const storeSettingsSchema = new mongoose.Schema({
       type: String,
       default: ''
     },
+    callPhone: {
+      type: String,
+      default: ''
+    },
     email: {
       type: String,
       default: ''
@@ -20,6 +24,10 @@ const storeSettingsSchema = new mongoose.Schema({
     }
   },
   banner: {
+    images: [{
+      type: String,
+      default: null
+    }],
     image: {
       type: String,
       default: null
@@ -48,6 +56,11 @@ const storeSettingsSchema = new mongoose.Schema({
       type: String,
       default: ''
     }
+  },
+  deliveryFee: {
+    type: Number,
+    default: 0,
+    min: 0
   }
 }, {
   timestamps: true

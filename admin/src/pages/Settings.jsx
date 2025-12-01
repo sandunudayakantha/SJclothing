@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
-import api from '../config/api'
+import api, { getImageUrl } from '../config/api'
 import Loading from '../components/Loading'
 
 const Settings = () => {
@@ -8,6 +8,7 @@ const Settings = () => {
   const [settings, setSettings] = useState({
     contact: {
       phone: '',
+      callPhone: '',
       email: '',
       address: '',
       whatsapp: ''
@@ -21,10 +22,11 @@ const Settings = () => {
       enabled: false,
       percentage: 0,
       title: ''
-    }
+    },
+    deliveryFee: 0
   })
-  const [existingBannerImage, setExistingBannerImage] = useState(null)
-  const [bannerImage, setBannerImage] = useState(null)
+  const [existingBannerImages, setExistingBannerImages] = useState([])
+  const [bannerImages, setBannerImages] = useState([])
 
   useEffect(() => {
     fetchSettings()
@@ -37,10 +39,16 @@ const Settings = () => {
       setSettings({
         contact: data.contact || settings.contact,
         banner: data.banner || settings.banner,
-        specialOffer: data.specialOffer || settings.specialOffer
+        specialOffer: data.specialOffer || settings.specialOffer,
+        deliveryFee: data.deliveryFee || 0
       })
-      if (data.banner?.image) {
-        setExistingBannerImage(data.banner.image)
+      // Handle both single image (backward compatibility) and multiple images
+      if (data.banner?.images && Array.isArray(data.banner.images) && data.banner.images.length > 0) {
+        setExistingBannerImages(data.banner.images)
+      } else if (data.banner?.image) {
+        setExistingBannerImages([data.banner.image])
+      } else {
+        setExistingBannerImages([])
       }
     } catch (error) {
       console.error('Error fetching settings:', error)
@@ -53,17 +61,29 @@ const Settings = () => {
     const { name, value, type, checked } = e.target
     const [section, field] = name.split('.')
 
-    setSettings(prev => ({
-      ...prev,
-      [section]: {
-        ...prev[section],
-        [field]: type === 'checkbox' ? checked : value
-      }
-    }))
+    if (name === 'deliveryFee') {
+      setSettings(prev => ({
+        ...prev,
+        deliveryFee: parseFloat(value) || 0
+      }))
+    } else {
+      setSettings(prev => ({
+        ...prev,
+        [section]: {
+          ...prev[section],
+          [field]: type === 'checkbox' ? checked : value
+        }
+      }))
+    }
   }
 
-  const handleBannerImageChange = (e) => {
-    setBannerImage(e.target.files[0])
+  const handleBannerImagesChange = (e) => {
+    const files = Array.from(e.target.files)
+    setBannerImages(files)
+  }
+
+  const handleDeleteBannerImage = (imageToDelete) => {
+    setExistingBannerImages(prev => prev.filter(img => img !== imageToDelete))
   }
 
   const handleSubmit = async (e) => {
@@ -72,6 +92,7 @@ const Settings = () => {
     try {
       const submitData = new FormData()
       submitData.append('contact[phone]', settings.contact.phone)
+      submitData.append('contact[callPhone]', settings.contact.callPhone)
       submitData.append('contact[email]', settings.contact.email)
       submitData.append('contact[address]', settings.contact.address)
       submitData.append('contact[whatsapp]', settings.contact.whatsapp)
@@ -80,15 +101,26 @@ const Settings = () => {
       submitData.append('specialOffer[enabled]', settings.specialOffer.enabled)
       submitData.append('specialOffer[percentage]', settings.specialOffer.percentage)
       submitData.append('specialOffer[title]', settings.specialOffer.title)
+      submitData.append('deliveryFee', settings.deliveryFee)
 
-      if (bannerImage) {
-        submitData.append('bannerImage', bannerImage)
-      }
+      // Append multiple banner images
+      bannerImages.forEach((file, index) => {
+        submitData.append('bannerImages', file)
+      })
+
+      // Append images to delete
+      const currentImages = existingBannerImages
+      const originalImages = settings.banner?.images || (settings.banner?.image ? [settings.banner.image] : [])
+      const imagesToDelete = originalImages.filter(img => !currentImages.includes(img))
+      imagesToDelete.forEach(img => {
+        submitData.append('bannerImagesToDelete', img)
+      })
 
       await api.put('/settings', submitData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       })
       toast.success('Settings updated successfully')
+      setBannerImages([]) // Clear new images after upload
       fetchSettings()
     } catch (error) {
       console.error('Error updating settings:', error)
@@ -111,15 +143,30 @@ const Settings = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-semibold text-gray-900 mb-2">
-                Phone
+                Phone (General)
               </label>
               <input
                 type="text"
                 name="contact.phone"
                 value={settings.contact.phone}
                 onChange={handleChange}
+                placeholder="+1234567890"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent"
               />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-2">
+                Call Phone Number *
+              </label>
+              <input
+                type="text"
+                name="contact.callPhone"
+                value={settings.contact.callPhone}
+                onChange={handleChange}
+                placeholder="+1234567890"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent"
+              />
+              <p className="text-xs text-gray-500 mt-1">This number will be used for the Call button</p>
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-900 mb-2">
@@ -135,7 +182,7 @@ const Settings = () => {
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-900 mb-2">
-                WhatsApp Number
+                WhatsApp Number *
               </label>
               <input
                 type="text"
@@ -145,6 +192,7 @@ const Settings = () => {
                 placeholder="+1234567890"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent"
               />
+              <p className="text-xs text-gray-500 mt-1">This number will be used for the WhatsApp button</p>
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-900 mb-2">
@@ -165,26 +213,62 @@ const Settings = () => {
         <div>
           <h2 className="text-xl font-bold text-gray-900 mb-4">Banner Settings</h2>
           <div className="space-y-6">
-            {existingBannerImage && (
+            {existingBannerImages.length > 0 && (
               <div>
-                <p className="text-sm font-semibold text-gray-900 mb-2">Current Banner Image</p>
-                <img
-                  src={`http://localhost:5007${existingBannerImage}`}
-                  alt="Banner"
-                  className="w-full h-64 object-cover rounded-lg"
-                />
+                <p className="text-sm font-semibold text-gray-900 mb-4">Current Banner Images ({existingBannerImages.length})</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {existingBannerImages.map((image, index) => (
+                    <div key={index} className="relative group">
+                      <img
+                        src={getImageUrl(image)}
+                        alt={`Banner ${index + 1}`}
+                        className="w-full h-48 object-cover rounded-lg border border-gray-200"
+                        onError={(e) => {
+                          e.target.src = 'https://via.placeholder.com/400x256?text=No+Image'
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteBannerImage(image)}
+                        className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Delete image"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                      <div className="absolute bottom-2 left-2 bg-black/70 text-white px-2 py-1 rounded text-xs">
+                        Image {index + 1}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
             <div>
               <label className="block text-sm font-semibold text-gray-900 mb-2">
-                Banner Image
+                Add Banner Images (Multiple selection allowed)
               </label>
               <input
                 type="file"
                 accept="image/*"
-                onChange={handleBannerImageChange}
+                multiple
+                onChange={handleBannerImagesChange}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent"
               />
+              <p className="text-xs text-gray-500 mt-1">You can select multiple images. They will be displayed in a carousel on the homepage.</p>
+              {bannerImages.length > 0 && (
+                <div className="mt-2">
+                  <p className="text-sm text-gray-700 mb-2">New images to upload: {bannerImages.length}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {bannerImages.map((file, index) => (
+                      <span key={index} className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
+                        {file.name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-900 mb-2">
@@ -209,6 +293,29 @@ const Settings = () => {
                 rows="3"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent"
               />
+            </div>
+          </div>
+        </div>
+
+        {/* Delivery Settings */}
+        <div>
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Delivery Settings</h2>
+          <div className="space-y-6">
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-2">
+                Delivery Fee ($)
+              </label>
+              <input
+                type="number"
+                name="deliveryFee"
+                value={settings.deliveryFee}
+                onChange={handleChange}
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent"
+              />
+              <p className="text-xs text-gray-500 mt-1">Default delivery fee for products without free delivery</p>
             </div>
           </div>
         </div>

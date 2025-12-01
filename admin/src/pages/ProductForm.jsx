@@ -25,7 +25,8 @@ const ProductForm = () => {
     colors: '',
     stock: '',
     featured: false,
-    newArrival: false
+    newArrival: false,
+    freeDelivery: false
   })
   const [images, setImages] = useState([])
   const [newImages, setNewImages] = useState([])
@@ -163,7 +164,8 @@ const ProductForm = () => {
         colors: product.colors.join(', '),
         stock: product.stock,
         featured: product.featured,
-        newArrival: product.newArrival
+        newArrival: product.newArrival,
+        freeDelivery: product.freeDelivery || false
       })
       setImages(product.images || [])
     } catch (error) {
@@ -542,7 +544,7 @@ const ProductForm = () => {
           <p className="text-sm text-gray-500 mt-2">You can select multiple images</p>
         </div>
 
-        <div className="flex gap-4">
+        <div className="flex gap-4 flex-wrap">
           <label className="flex items-center gap-2">
             <input
               type="checkbox"
@@ -562,6 +564,16 @@ const ProductForm = () => {
               className="w-4 h-4 text-accent focus:ring-accent"
             />
             <span className="text-sm font-semibold text-gray-900">New Arrival</span>
+          </label>
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              name="freeDelivery"
+              checked={formData.freeDelivery}
+              onChange={handleChange}
+              className="w-4 h-4 text-accent focus:ring-accent"
+            />
+            <span className="text-sm font-semibold text-gray-900">Free Delivery</span>
           </label>
         </div>
 

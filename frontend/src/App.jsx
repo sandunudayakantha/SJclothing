@@ -1,7 +1,9 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import Navbar from './components/Navbar'
+import Footer from './components/Footer'
 import ConnectionStatus from './components/ConnectionStatus'
+import FloatingButtons from './components/FloatingButtons'
 import Home from './pages/Home'
 import Products from './pages/Products'
 import ProductDetail from './pages/ProductDetail'
@@ -25,6 +27,8 @@ function App() {
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/contact" element={<Contact />} />
           </Routes>
+          <Footer />
+          <FloatingButtons />
           <Toaster position="top-right" />
         </div>
       </Router>

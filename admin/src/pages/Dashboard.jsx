@@ -6,6 +6,7 @@ const Dashboard = () => {
   const [stats, setStats] = useState(null)
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
+  const [messageStats, setMessageStats] = useState(null)
 
   useEffect(() => {
     fetchData()
@@ -13,12 +14,14 @@ const Dashboard = () => {
 
   const fetchData = async () => {
     try {
-      const [statsRes, ordersRes] = await Promise.all([
+      const [statsRes, ordersRes, messageStatsRes] = await Promise.all([
         api.get('/orders/stats'),
-        api.get('/orders?limit=5')
+        api.get('/orders?limit=5'),
+        api.get('/contact-messages/stats').catch(() => ({ data: { total: 0, unread: 0, spam: 0, today: 0 } }))
       ])
       setStats(statsRes.data)
       setOrders(ordersRes.data)
+      setMessageStats(messageStatsRes.data)
     } catch (error) {
       console.error('Error fetching dashboard data:', error)
     } finally {
@@ -53,6 +56,28 @@ const Dashboard = () => {
           <p className="text-3xl font-bold text-green-600">{stats?.deliveredOrders || 0}</p>
         </div>
       </div>
+
+      {/* Contact Messages Stats */}
+      {messageStats && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white border border-gray-200 rounded-lg p-6">
+            <h3 className="text-gray-600 text-sm font-semibold mb-2">Total Messages</h3>
+            <p className="text-3xl font-bold text-gray-900">{messageStats.total || 0}</p>
+          </div>
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+            <h3 className="text-blue-600 text-sm font-semibold mb-2">Unread Messages</h3>
+            <p className="text-3xl font-bold text-blue-900">{messageStats.unread || 0}</p>
+          </div>
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+            <h3 className="text-red-600 text-sm font-semibold mb-2">Spam Messages</h3>
+            <p className="text-3xl font-bold text-red-900">{messageStats.spam || 0}</p>
+          </div>
+          <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+            <h3 className="text-green-600 text-sm font-semibold mb-2">Messages Today</h3>
+            <p className="text-3xl font-bold text-green-900">{messageStats.today || 0}</p>
+          </div>
+        </div>
+      )}
 
       {/* Latest Orders */}
       <div className="bg-white border border-gray-200 rounded-lg p-6">

@@ -10,6 +10,7 @@ const Sidebar = () => {
     { path: '/admin/sizes', label: 'Sizes', icon: '📏' },
     { path: '/admin/colors', label: 'Colors', icon: '🎨' },
     { path: '/admin/orders', label: 'Orders', icon: '📦' },
+    { path: '/admin/contact-messages', label: 'Messages', icon: '💬' },
     { path: '/admin/settings', label: 'Settings', icon: '⚙️' },
   ]
 
